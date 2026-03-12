@@ -6,22 +6,15 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
+import { useTask } from "../contexts/TaskContext";
 
-interface DeleteConfirmDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}
+export function DeleteConfirmDialog() {
+  const { deleteDialog, closeDeleteConfirm, confirmDelete } = useTask();
 
-export function DeleteConfirmDialog({
-  open,
-  onClose,
-  onConfirm,
-}: DeleteConfirmDialogProps) {
   return (
     <Dialog
-      open={open}
-      onClose={onClose}
+      open={deleteDialog.open}
+      onClose={closeDeleteConfirm}
       PaperProps={{
         sx: { borderRadius: 4, p: 1, minWidth: { xs: 300, sm: 400 } },
       }}
@@ -36,11 +29,14 @@ export function DeleteConfirmDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions sx={{ pb: 1, px: 3 }}>
-        <Button onClick={onClose} sx={{ color: "#6b7280", fontWeight: 700 }}>
+        <Button
+          onClick={closeDeleteConfirm}
+          sx={{ color: "#6b7280", fontWeight: 700 }}
+        >
           Hủy bỏ
         </Button>
         <Button
-          onClick={onConfirm}
+          onClick={confirmDelete}
           color="error"
           variant="contained"
           sx={{ fontWeight: 700, boxShadow: "none", borderRadius: 2 }}

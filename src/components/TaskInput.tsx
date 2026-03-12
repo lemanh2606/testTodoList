@@ -1,19 +1,14 @@
 import { Paper, InputBase } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import { useTask } from "../contexts/TaskContext";
 
 interface TaskInputProps {
-  newTaskText: string;
-  setNewTaskText: (val: string) => void;
-  onAddTask: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   visible: boolean;
 }
 
-export function TaskInput({
-  newTaskText,
-  setNewTaskText,
-  onAddTask,
-  visible,
-}: TaskInputProps) {
+export function TaskInput({ visible }: TaskInputProps) {
+  const { newTaskText, setNewTaskText, addTask } = useTask();
+
   if (!visible) return null;
 
   return (
@@ -36,7 +31,7 @@ export function TaskInput({
         placeholder="Add new task"
         value={newTaskText}
         onChange={(e) => setNewTaskText(e.target.value)}
-        onKeyDown={onAddTask}
+        onKeyDown={addTask}
       />
     </Paper>
   );

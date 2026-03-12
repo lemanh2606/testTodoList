@@ -9,32 +9,24 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
-import type { Task, Category } from "../types";
+import { useTask } from "../contexts/TaskContext";
+import { CATEGORIES_LIST } from "../constants";
 
-interface TaskDrawerProps {
-  open: boolean;
-  onClose: () => void;
-  task: Task | null;
-  onChangeTask: (task: Task) => void;
-  onSave: () => void;
-  onDeleteRequest: (taskId: number) => void;
-  categoriesList: Category[];
-}
+export function TaskDrawer() {
+  const {
+    isDrawerOpen,
+    setIsDrawerOpen,
+    selectedTask,
+    setSelectedTask,
+    saveSelectedTask,
+    openDeleteConfirm,
+  } = useTask();
 
-export function TaskDrawer({
-  open,
-  onClose,
-  task,
-  onChangeTask,
-  onSave,
-  onDeleteRequest,
-  categoriesList,
-}: TaskDrawerProps) {
   return (
     <Drawer
       anchor="right"
-      open={open}
-      onClose={onClose}
+      open={isDrawerOpen}
+      onClose={() => setIsDrawerOpen(false)}
       PaperProps={{
         sx: { width: { xs: "100%", sm: 400 }, p: 4, bgcolor: "#ffffff" },
       }}
@@ -50,12 +42,15 @@ export function TaskDrawer({
         <Typography variant="h5" sx={{ fontWeight: 800 }}>
           Chỉnh sửa Task
         </Typography>
-        <IconButton onClick={onClose} sx={{ bgcolor: "#f3f4f6" }}>
+        <IconButton
+          onClick={() => setIsDrawerOpen(false)}
+          sx={{ bgcolor: "#f3f4f6" }}
+        >
           <CloseIcon />
         </IconButton>
       </Box>
       <Divider sx={{ mb: 4 }} />
-      {task && (
+      {selectedTask && (
         <Box
           sx={{ display: "flex", flexDirection: "column", gap: 3.5, flex: 1 }}
         >
@@ -65,21 +60,23 @@ export function TaskDrawer({
             fullWidth
             multiline
             rows={3}
-            value={task.text}
-            onChange={(e) => onChangeTask({ ...task, text: e.target.value })}
+            value={selectedTask.text}
+            onChange={(e) =>
+              setSelectedTask({ ...selectedTask, text: e.target.value })
+            }
           />
 
           <TextField
             select
             label="Danh mục List (Category)"
-            value={task.categoryId}
+            value={selectedTask.categoryId}
             onChange={(e) =>
-              onChangeTask({ ...task, categoryId: e.target.value })
+              setSelectedTask({ ...selectedTask, categoryId: e.target.value })
             }
             SelectProps={{ native: true }}
             fullWidth
           >
-            {categoriesList.map((cat) => (
+            {CATEGORIES_LIST.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
               </option>
@@ -93,7 +90,7 @@ export function TaskDrawer({
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={() => onDeleteRequest(task.id)}
+              onClick={() => openDeleteConfirm(selectedTask.id)}
               sx={{ flex: 1, py: 1.2, fontWeight: 700, borderRadius: 2 }}
             >
               Xóa
@@ -101,7 +98,7 @@ export function TaskDrawer({
             <Button
               variant="contained"
               color="primary"
-              onClick={onSave}
+              onClick={saveSelectedTask}
               sx={{
                 flex: 2,
                 py: 1.2,

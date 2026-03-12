@@ -4,23 +4,18 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import type { Task } from "../types";
+import { useTask } from "../contexts/TaskContext";
 
 interface TaskItemProps {
   task: Task;
-  onOpenDetails: (task: Task) => void;
-  onToggleComplete: (id: number) => void;
-  onToggleImportant: (id: number) => void;
 }
 
-export function TaskItem({
-  task,
-  onOpenDetails,
-  onToggleComplete,
-  onToggleImportant,
-}: TaskItemProps) {
+export function TaskItem({ task }: TaskItemProps) {
+  const { toggleComplete, toggleImportant, openTaskDetails } = useTask();
+
   return (
     <Paper
-      onClick={() => onOpenDetails(task)}
+      onClick={() => openTaskDetails(task)}
       sx={{
         p: "6px 16px",
         display: "flex",
@@ -42,7 +37,7 @@ export function TaskItem({
         size="small"
         onClick={(e) => {
           e.stopPropagation();
-          onToggleComplete(task.id);
+          toggleComplete(task.id);
         }}
         sx={{
           mr: 1,
@@ -69,7 +64,7 @@ export function TaskItem({
         size="small"
         onClick={(e) => {
           e.stopPropagation();
-          onToggleImportant(task.id);
+          toggleImportant(task.id);
         }}
         sx={{
           mr: 1,

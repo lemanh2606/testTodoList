@@ -15,25 +15,18 @@ import FlagIcon from "@mui/icons-material/Flag";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderIcon from "@mui/icons-material/Folder";
-import type { FilterState, Task, Category } from "../types";
+import { useTask } from "../contexts/TaskContext";
+import { CATEGORIES_LIST } from "../constants";
 
-interface SidebarProps {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  currentFilter: FilterState;
-  setCurrentFilter: (filter: FilterState) => void;
-  tasks: Task[];
-  categoriesList: Category[];
-}
+export function Sidebar() {
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentFilter,
+    setCurrentFilter,
+    tasks,
+  } = useTask();
 
-export function Sidebar({
-  searchQuery,
-  setSearchQuery,
-  currentFilter,
-  setCurrentFilter,
-  tasks,
-  categoriesList,
-}: SidebarProps) {
   const countAll = tasks.filter((t) => !t.deleted).length;
   const countImportant = tasks.filter((t) => t.important && !t.deleted).length;
   const countCompleted = tasks.filter((t) => t.completed && !t.deleted).length;
@@ -193,7 +186,7 @@ export function Sidebar({
           Categories
         </Typography>
         <List disablePadding>
-          {categoriesList.map((cat, idx) => {
+          {CATEGORIES_LIST.map((cat, idx) => {
             const catCount = tasks.filter(
               (t) => t.categoryId === cat.id && !t.deleted,
             ).length;
