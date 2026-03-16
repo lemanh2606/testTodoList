@@ -1,18 +1,40 @@
-import { Box, ThemeProvider, CssBaseline, Typography } from "@mui/material";
+/**
+ * ============================================================
+ *  APP COMPONENT - Component gốc của ứng dụng
+ * ============================================================
+ *
+ * Trước (Context API):
+ *   const { listHeader, currentFilter } = useTask();
+ *
+ * Sau (Redux):
+ *   const listHeader = useAppSelector(selectListHeader);
+ *   const currentFilter = useAppSelector(selectCurrentFilter);
+ *
+ * Sự khác biệt:
+ *  - useAppSelector chỉ re-render component khi đúng phần state
+ *    mà nó đang subscribe thay đổi (granular re-render)
+ *  - Context: mọi consumer re-render khi bất kỳ giá trị nào thay đổi
+ * ============================================================
+ */
 
-// Đưa components ra ngoài App
+import { Box, ThemeProvider, CssBaseline, Typography } from "@mui/material";
 import { Sidebar } from "./components/Sidebar";
 import { TaskInput } from "./components/TaskInput";
 import { TaskList } from "./components/TaskList";
 import { TaskDrawer } from "./components/TaskDrawer";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
-
-// Types, Constants và Theme
 import { theme } from "./theme";
-import { useTask } from "./contexts/TaskContext";
+
+// Redux hooks và selectors
+import { useAppSelector } from "./store/hooks";
+import { selectCurrentFilter } from "./store/slices/uiSlice";
+import { selectListHeader } from "./store/selectors";
 
 export default function App() {
-  const { listHeader, currentFilter } = useTask();
+  // Lấy dữ liệu từ Redux store
+  // Component chỉ re-render khi listHeader hoặc currentFilter thay đổi
+  const listHeader = useAppSelector(selectListHeader);
+  const currentFilter = useAppSelector(selectCurrentFilter);
 
   return (
     <ThemeProvider theme={theme}>
@@ -37,14 +59,12 @@ export default function App() {
             }}
           >
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Task Header & Task List sẽ được handle trong TaskList */}
-              <Typography
-                variant="h4"
-                sx={{ fontWeight: 800, color: "#111827" }}
-              >
+              {/* Tiêu đề thay đổi theo filter đang chọn */}
+              <Typography variant="h4" sx={{ fontWeight: 800, color: "#111827" }}>
                 {listHeader}
               </Typography>
 
+              {/* Ẩn ô nhập task khi đang xem thùng rác */}
               <TaskInput visible={currentFilter.value !== "Deleted"} />
 
               <TaskList />
@@ -53,8 +73,10 @@ export default function App() {
         </Box>
       </Box>
 
+      {/* Drawer xem/sửa task - render ngoài flow để overlay toàn màn hình */}
       <TaskDrawer />
 
+      {/* Dialog xác nhận xóa */}
       <DeleteConfirmDialog />
     </ThemeProvider>
   );

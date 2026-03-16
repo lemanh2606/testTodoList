@@ -1,3 +1,35 @@
+/**
+ * ============================================================
+ *  TASK DRAWER - Panel bên phải để xem/chỉnh sửa task
+ * ============================================================
+ *
+ * REDUX STATE ĐƯỢC DÙNG:
+ *  ┌─────────────────────────────────────────────────────┐
+ *  │  READ (useAppSelector):                             │
+ *  │    • selectIsDrawerOpen → isDrawerOpen              │
+ *  │    • selectSelectedTask → selectedTask              │
+ *  │                                                     │
+ *  │  WRITE (dispatch):                                  │
+ *  │    • closeDrawer() → đóng Drawer                    │
+ *  │    • updateSelectedTask(task) → cập nhật local edit │
+ *  │    • updateTask(task) → lưu task vào store          │
+ *  │    • openDeleteDialog(taskId) → mở dialog xóa      │
+ *  └─────────────────────────────────────────────────────┘
+ *
+ * LUỒNG KHI USER SỬA VÀ LƯU:
+ *  1. TaskItem click → dispatch(openDrawer(task)) → selectedTask = {...task}
+ *  2. User gõ sửa text → dispatch(updateSelectedTask({...selectedTask, text}))
+ *     (chỉ cập nhật local copy trong state.ui.selectedTask, KHÔNG ảnh hưởng state.tasks)
+ *  3. User click "Lưu Thay Đổi" → dispatch(updateTask(selectedTask))
+ *     → tasksSlice cập nhật task gốc trong state.tasks
+ *     → dispatch(closeDrawer()) → Drawer đóng
+ *
+ * Tại sao cần 2 bước (updateSelectedTask rồi mới updateTask)?
+ *  → Cho phép người dùng sửa và hủy (Cancel) mà không ảnh hưởng dữ liệu gốc
+ *  → selectedTask trong uiSlice là "bản nháp" của task đang sửa
+ * ============================================================
+ */
+
 import {
   Drawer,
   Box,
@@ -9,28 +41,50 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useTask } from "../contexts/TaskContext";
 import { CATEGORIES_LIST } from "../constants";
 
+// Redux
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  selectIsDrawerOpen,
+  selectSelectedTask,
+  closeDrawer,
+  updateSelectedTask,
+  openDeleteDialog,
+} from "../store/slices/uiSlice";
+import { updateTask } from "../store/slices/tasksSlice";
+
 export function TaskDrawer() {
-  const {
-    isDrawerOpen,
-    setIsDrawerOpen,
-    selectedTask,
-    setSelectedTask,
-    saveSelectedTask,
-    openDeleteConfirm,
-  } = useTask();
+  // ── Lấy dữ liệu từ Redux store ──────────────────────────
+  const dispatch = useAppDispatch();
+  const isDrawerOpen = useAppSelector(selectIsDrawerOpen);
+  const selectedTask = useAppSelector(selectSelectedTask);
+
+  /**
+   * handleSave - Lưu các thay đổi từ Drawer vào store chính
+   *
+   * Luồng:
+   *  dispatch(updateTask(selectedTask)) → tasksSlice cập nhật task gốc
+   *  dispatch(closeDrawer()) → đóng Drawer
+   */
+  const handleSave = () => {
+    if (selectedTask) {
+      dispatch(updateTask(selectedTask)); // Lưu vào state.tasks
+      dispatch(closeDrawer());            // Đóng Drawer
+    }
+  };
 
   return (
     <Drawer
       anchor="right"
       open={isDrawerOpen}
-      onClose={() => setIsDrawerOpen(false)}
+      // Đóng khi click overlay phía sau
+      onClose={() => dispatch(closeDrawer())}
       PaperProps={{
         sx: { width: { xs: "100%", sm: 400 }, p: 4, bgcolor: "#ffffff" },
       }}
     >
+      {/* ── Header Drawer ────────────────────────────────── */}
       <Box
         sx={{
           display: "flex",
@@ -43,17 +97,24 @@ export function TaskDrawer() {
           Chỉnh sửa Task
         </Typography>
         <IconButton
-          onClick={() => setIsDrawerOpen(false)}
+          onClick={() => dispatch(closeDrawer())}
           sx={{ bgcolor: "#f3f4f6" }}
         >
           <CloseIcon />
         </IconButton>
       </Box>
       <Divider sx={{ mb: 4 }} />
+
+      {/* ── Form chỉnh sửa (chỉ hiển thị khi có task được chọn) ── */}
       {selectedTask && (
         <Box
           sx={{ display: "flex", flexDirection: "column", gap: 3.5, flex: 1 }}
         >
+          {/* ── Tên công việc ─────────────────────────────────
+              onChange → dispatch(updateSelectedTask({...selectedTask, text}))
+              → Cập nhật local copy (state.ui.selectedTask)
+              → Chưa ảnh hưởng state.tasks (task gốc)
+          ─────────────────────────────────────────────────── */}
           <TextField
             label="Tên công việc"
             variant="outlined"
@@ -62,16 +123,27 @@ export function TaskDrawer() {
             rows={3}
             value={selectedTask.text}
             onChange={(e) =>
-              setSelectedTask({ ...selectedTask, text: e.target.value })
+              dispatch(
+                updateSelectedTask({ ...selectedTask, text: e.target.value })
+              )
             }
           />
 
+          {/* ── Danh mục ──────────────────────────────────────
+              onChange → dispatch(updateSelectedTask({...selectedTask, categoryId}))
+              → Cập nhật local copy (state.ui.selectedTask)
+          ─────────────────────────────────────────────────── */}
           <TextField
             select
             label="Danh mục List (Category)"
             value={selectedTask.categoryId}
             onChange={(e) =>
-              setSelectedTask({ ...selectedTask, categoryId: e.target.value })
+              dispatch(
+                updateSelectedTask({
+                  ...selectedTask,
+                  categoryId: e.target.value,
+                })
+              )
             }
             SelectProps={{ native: true }}
             fullWidth
@@ -83,22 +155,26 @@ export function TaskDrawer() {
             ))}
           </TextField>
 
+          {/* ── Actions ───────────────────────────────────────*/}
           <Box
             sx={{ display: "flex", gap: 2, alignItems: "center", mt: "auto" }}
           >
+            {/* Nút Xóa → mở Dialog xác nhận xóa */}
             <Button
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={() => openDeleteConfirm(selectedTask.id)}
+              onClick={() => dispatch(openDeleteDialog(selectedTask.id))}
               sx={{ flex: 1, py: 1.2, fontWeight: 700, borderRadius: 2 }}
             >
               Xóa
             </Button>
+
+            {/* Nút Lưu → cập nhật task gốc trong store */}
             <Button
               variant="contained"
               color="primary"
-              onClick={saveSelectedTask}
+              onClick={handleSave}
               sx={{
                 flex: 2,
                 py: 1.2,

@@ -1,3 +1,30 @@
+/**
+ * ============================================================
+ *  SIDEBAR - Thanh điều hướng & tìm kiếm bên trái
+ * ============================================================
+ *
+ * REDUX STATE ĐƯỢC DÙNG:
+ *  ┌─────────────────────────────────────────────────────┐
+ *  │  READ (useAppSelector):                             │
+ *  │    • selectSearchQuery  → searchQuery               │
+ *  │    • selectCurrentFilter → currentFilter            │
+ *  │    • selectCountAll, selectCountImportant,          │
+ *  │      selectCountCompleted, selectCountDeleted       │
+ *  │      (tất cả từ tasksSlice selectors)               │
+ *  │                                                     │
+ *  │  WRITE (dispatch):                                  │
+ *  │    • setSearchQuery(query) → cập nhật search query  │
+ *  │    • setCurrentFilter(filter) → đổi bộ lọc         │
+ *  └─────────────────────────────────────────────────────┘
+ *
+ * LUỒNG KHI USER CLICK VÀO THẺ FILTER:
+ *  Sidebar →  click "Important"
+ *          → dispatch(setCurrentFilter({type:"CARD", value:"Important"}))
+ *          → state.ui.currentFilter cập nhật
+ *          → Sidebar + TaskList + App re-render (chỉ những nơi subscribe)
+ * ============================================================
+ */
+
 import {
   Box,
   Paper,
@@ -15,22 +42,39 @@ import FlagIcon from "@mui/icons-material/Flag";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FolderIcon from "@mui/icons-material/Folder";
-import { useTask } from "../contexts/TaskContext";
 import { CATEGORIES_LIST } from "../constants";
 
-export function Sidebar() {
-  const {
-    searchQuery,
-    setSearchQuery,
-    currentFilter,
-    setCurrentFilter,
-    tasks,
-  } = useTask();
+// Redux
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { selectSearchQuery, setSearchQuery } from "../store/slices/searchSlice";
+import {
+  selectCurrentFilter,
+  setCurrentFilter,
+} from "../store/slices/uiSlice";
+import {
+  selectCountAll,
+  selectCountImportant,
+  selectCountCompleted,
+  selectCountDeleted,
+  selectAllTasks,
+} from "../store/slices/tasksSlice";
 
-  const countAll = tasks.filter((t) => !t.deleted).length;
-  const countImportant = tasks.filter((t) => t.important && !t.deleted).length;
-  const countCompleted = tasks.filter((t) => t.completed && !t.deleted).length;
-  const countDeleted = tasks.filter((t) => t.deleted).length;
+export function Sidebar() {
+  // ── Lấy dữ liệu từ Redux store ──────────────────────────
+  const dispatch = useAppDispatch();
+  const searchQuery = useAppSelector(selectSearchQuery);
+  const currentFilter = useAppSelector(selectCurrentFilter);
+
+  // Các count được tính bằng selectors tối ưu (chỉ re-render khi tasks thay đổi)
+  const countAll = useAppSelector(selectCountAll);
+  const countImportant = useAppSelector(selectCountImportant);
+  const countCompleted = useAppSelector(selectCountCompleted);
+  const countDeleted = useAppSelector(selectCountDeleted);
+  const tasks = useAppSelector(selectAllTasks); // Để tính count theo category
+
+  // Count task theo từng danh mục (tính inline vì cần tasks array)
+  const getCategoryCount = (categoryId: string) =>
+    tasks.filter((t) => t.categoryId === categoryId && !t.deleted).length;
 
   const cards = [
     {
@@ -76,6 +120,11 @@ export function Sidebar() {
         borderRight: "1px solid #e5e7eb",
       }}
     >
+      {/* ── Search Input ─────────────────────────────────────
+          onChange → dispatch(setSearchQuery(value))
+          → state.search.searchQuery cập nhật
+          → TaskList lọc lại danh sách task theo query mới
+      ─────────────────────────────────────────────────── */}
       <Paper
         sx={{
           p: "4px 8px",
@@ -95,10 +144,15 @@ export function Sidebar() {
           sx={{ ml: 1, flex: 1, fontSize: 14 }}
           placeholder="Search"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => dispatch(setSearchQuery(e.target.value))}
         />
       </Paper>
 
+      {/* ── Filter Cards (All, Important, Completed, Deleted) ──
+          onClick → dispatch(setCurrentFilter({type:"CARD", value}))
+          → state.ui.currentFilter cập nhật
+          → TaskList re-render với danh sách đã lọc mới
+      ─────────────────────────────────────────────────── */}
       <Box
         sx={{
           display: "grid",
@@ -108,7 +162,8 @@ export function Sidebar() {
       >
         {cards.map((card, idx) => {
           const isActive =
-            currentFilter.type === "CARD" && currentFilter.value === card.value;
+            currentFilter.type === "CARD" &&
+            currentFilter.value === card.value;
           const isAllButActive =
             card.value === "All" && currentFilter.type !== "CARD";
 
@@ -122,7 +177,7 @@ export function Sidebar() {
             <Paper
               key={idx}
               onClick={() =>
-                setCurrentFilter({ type: "CARD", value: card.value })
+                dispatch(setCurrentFilter({ type: "CARD", value: card.value }))
               }
               sx={{
                 p: "12px 14px",
@@ -172,6 +227,11 @@ export function Sidebar() {
         })}
       </Box>
 
+      {/* ── Category List ────────────────────────────────────
+          onClick → dispatch(setCurrentFilter({type:"CATEGORY", value:cat.id}))
+          → state.ui.currentFilter cập nhật
+          → TaskList hiển thị task thuộc danh mục được chọn
+      ─────────────────────────────────────────────────── */}
       <Box sx={{ mt: 1 }}>
         <Typography
           variant="caption"
@@ -187,10 +247,7 @@ export function Sidebar() {
         </Typography>
         <List disablePadding>
           {CATEGORIES_LIST.map((cat, idx) => {
-            const catCount = tasks.filter(
-              (t) => t.categoryId === cat.id && !t.deleted,
-            ).length;
-
+            const catCount = getCategoryCount(cat.id);
             const isActive =
               currentFilter.type === "CATEGORY" &&
               currentFilter.value === cat.id;
@@ -199,7 +256,9 @@ export function Sidebar() {
               <ListItem
                 key={idx}
                 onClick={() =>
-                  setCurrentFilter({ type: "CATEGORY", value: cat.id })
+                  dispatch(
+                    setCurrentFilter({ type: "CATEGORY", value: cat.id })
+                  )
                 }
                 sx={{
                   px: 1,
