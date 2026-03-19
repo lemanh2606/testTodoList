@@ -1,30 +1,3 @@
-/**
- * ============================================================
- *  TASK INPUT - Ô nhập task mới
- * ============================================================
- *
- * REDUX STATE ĐƯỢC DÙNG:
- *  ┌─────────────────────────────────────────────────────┐
- *  │  READ (useAppSelector):                             │
- *  │    • selectNewTaskText → newTaskText (controlled)   │
- *  │    • selectCurrentFilter → currentFilter            │
- *  │      (để biết đang ở filter nào khi tạo task mới)  │
- *  │                                                     │
- *  │  WRITE (dispatch):                                  │
- *  │    • setNewTaskText(text) → cập nhật text đang gõ  │
- *  │    • addTask(newTask)     → thêm task vào danh sách │
- *  │    • clearNewTaskText()   → xóa ô nhập sau khi thêm│
- *  └─────────────────────────────────────────────────────┘
- *
- * LUỒNG THÊM TASK MỚI:
- *  1. User gõ text → dispatch(setNewTaskText(text))
- *  2. User nhấn Enter → handleKeyDown được gọi
- *  3. Tạo object Task mới với id = Date.now()
- *  4. dispatch(addTask(newTask)) → thêm vào state.tasks
- *  5. dispatch(clearNewTaskText()) → reset ô nhập về ""
- * ============================================================
- */
-
 import { Paper, InputBase } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import type React from "react";
@@ -34,12 +7,9 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { selectNewTaskText, setNewTaskText, clearNewTaskText } from "../store/slices/searchSlice";
 import { selectCurrentFilter } from "../store/slices/uiSlice";
 import { addTask } from "../store/slices/tasksSlice";
-import type { Task } from "../types";
+import type { Task, TaskInputProps } from "../types";
 
-interface TaskInputProps {
-  visible: boolean;
-}
-
+// Ô nhập liệu để thêm công việc mới
 export function TaskInput({ visible }: TaskInputProps) {
   // ── Lấy dữ liệu từ Redux store ──────────────────────────
   const dispatch = useAppDispatch();
